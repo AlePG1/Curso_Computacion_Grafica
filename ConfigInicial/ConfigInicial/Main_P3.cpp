@@ -1,5 +1,8 @@
 #include<iostream>
-
+// Alejandro García González
+// 422066992
+// Práctica 3
+// Fecha de entrega: 20 de febrero del 2025
 //#define GLEW_STATIC
 
 #include <GL/glew.h>
