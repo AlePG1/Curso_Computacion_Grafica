@@ -1,118 +1,123 @@
-﻿/*
-* García González Alejandro   422066992
-* Previo 8 Iluminación        Fecha de entrega: 23/marzo/2024
+﻿/*Práctica 8
+* García González Alejandro    422066992
+* 27 de Marzo 2024
 */
 
-// Std. Includes
-#include <string> // Librería para manipulación de cadenas de texto
+// Inclusiones estándar
+#include <string>  // Librería estándar para el manejo de cadenas
 
 // GLEW
-#include <GL/glew.h> // Librería para la gestión de extensiones y funciones de OpenGL
+#include <GL/glew.h>  // Librería para manejar las extensiones de OpenGL
 
 // GLFW
-#include <GLFW/glfw3.h> // Librería para crear ventanas y gestionar eventos
+#include <GLFW/glfw3.h>  // Librería para la creación de ventanas y manejo de eventos de OpenGL
 
-// GL includes
-#include "Shader.h" // Librería para manejar shaders
-#include "Camera.h" // Librería para manejar la cámara
-#include "Model.h"  // Librería para cargar y renderizar modelos 3D
+// Librerías para OpenGL
+#include "Shader.h"  // Header para la clase Shader
+#include "Camera.h"  // Header para la clase Camera
+#include "Model.h"   // Header para la clase Model
 
-// GLM Mathemtics
-#include <glm/glm.hpp> // Librería para operaciones matemáticas (vectores, matrices)
-#include <glm/gtc/matrix_transform.hpp> // Funciones para transformaciones de matrices (traslación, rotación, etc.)
-#include <glm/gtc/type_ptr.hpp> // Funciones para convertir matrices a punteros
+// Matematáticas GLM
+#include <glm/glm.hpp>  // Librería principal de GLM para matemáticas
+#include <glm/gtc/matrix_transform.hpp>  // Transformaciones de matrices (traslación, rotación, escalado)
+#include <glm/gtc/type_ptr.hpp>  // Convierte matrices a punteros
 
-// Other Libs
-#include "SOIL2/SOIL2.h" // Librería para carga de texturas
-#include "stb_image.h" // Librería para carga de imágenes (dependencia para SOIL2)
+// Otras librerías
+#include "SOIL2/SOIL2.h"  // Librería para cargar imágenes (SOIL2)
+#include "stb_image.h"  // Librería para cargar imágenes (STB)
 
-// Properties
-const GLuint WIDTH = 800, HEIGHT = 600; // Definir las dimensiones de la ventana
-int SCREEN_WIDTH, SCREEN_HEIGHT; // Dimensiones de la ventana
+// Propiedades de la ventana
+const GLuint WIDTH = 1280, HEIGHT = 800;  // Ancho y alto de la ventana
+int SCREEN_WIDTH, SCREEN_HEIGHT;  // Variables para el tamaño actual de la ventana
 
-// Function prototypes
-void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode); // Prototipo para la función de control de teclas
-void MouseCallback(GLFWwindow* window, double xPos, double yPos); // Prototipo para la función de control del ratón
-void DoMovement(); // Prototipo para la función que maneja el movimiento de la cámara
+// Prototipos de funciones
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);  // Callback para el teclado
+void MouseCallback(GLFWwindow* window, double xPos, double yPos);  // Callback para el mouse
+void DoMovement();  // Función para manejar los movimientos de la cámara
 
-// Camera
-Camera camera(glm::vec3(0.0f, 0.0f, 0.0f)); // Instancia de la cámara en la posición (0, 0, 0)
-bool keys[1024]; // Arreglo para registrar las teclas presionadas
-GLfloat lastX = 400, lastY = 300; // Posición inicial del cursor en la ventana
-bool firstMouse = true; // Variable para detectar el primer movimiento del ratón
+// Cámara
+Camera camera(glm::vec3(0.0f, 30.0f, 5.0f));  // Crea la cámara en la posición especificada
+bool keys[1024];  // Array para manejar las teclas presionadas
+GLfloat lastX = 400, lastY = 300;  // Última posición del mouse
+bool firstMouse = true;  // Indica si es el primer movimiento del mouse
 
-// Light attributes
-glm::vec3 lightPos(0.5f, 0.5f, 2.5f); // Posición de la primera fuente de luz
-glm::vec3 lightPos2(-0.5f, -0.5f, -2.5f); // Posición de la segunda fuente de luz
-//glm::vec3 lightPos3(0.0f, 0.0f, 0.0f); // Posición de la tercera fuente de luz (comentada)
-
-float movelightPos = 0.0f;      // Variable para mover la luz
-GLfloat deltaTime = 0.0f;       // Tiempo entre fotogramas
-GLfloat lastFrame = 0.0f;       // Último fotograma para el cálculo del tiempo
-float rot = 0.0f;               // Ángulo de rotación
-bool activanim = false;         // Flag para activar la animación
+// Atributos de la luz
+glm::vec3 lightPos(100.5f, 0.5f, 0.0f);  // Posición de la luz principal (Sol)
+glm::vec3 secondLightPos(100.8f, 0.8f, 0.0f);  // Posición de la segunda luz (Luna)
+float movelightPos = 0.0f;  // Movimiento de la luz principal
+float movelightPos2 = 0.0f;  // Movimiento de la segunda luz
+float reloj = 0.0f;  // Tiempo del ciclo día/noche
+float activador = 0.0f;  // Activador de la fase de día/noche
+GLfloat deltaTime = 0.0f;  // Tiempo entre fotogramas
+GLfloat lastFrame = 0.0f;  // Último fotograma para calcular deltaTime
+float rot = 0.0f;  // Ángulo de rotación de la cámara
+bool activanim = false;  // Activación de la animación
 
 int main()
 {
-    // Init GLFW
-    glfwInit(); // Inicializa la librería GLFW
-    // Establece opciones necesarias para GLFW
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // Define la versión principal de OpenGL
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3); // Define la versión menor de OpenGL
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // Define el perfil de OpenGL
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Habilita compatibilidad hacia adelante
-    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE); // Desactiva la redimensión de la ventana
+    // Inicializa GLFW
+    glfwInit();
 
-    // Crear la ventana GLFW
-    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Previo 8. Garcia Gonzalez Alejandro", nullptr, nullptr);
+    // Configura las opciones requeridas para GLFW
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);  // Versión principal de OpenGL (3.x)
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);  // Versión menor de OpenGL (3.x)
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // Perfil de OpenGL: core
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);  // Compatibilidad hacia adelante
+    glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);  // La ventana no será redimensionable
+
+    // Crea una ventana con las características especificadas
+    GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "Practica 8 Garcia Gonzalez Alejandro", nullptr, nullptr);
 
     // Verifica si la ventana fue creada correctamente
     if (nullptr == window)
     {
-        std::cout << "Failed to create GLFW window" << std::endl; // Muestra un error si falla
-        glfwTerminate(); // Termina GLFW
-        return EXIT_FAILURE; // Termina el programa
+        std::cout << "Failed to create GLFW window" << std::endl;  // Mensaje de error
+        glfwTerminate();  // Termina GLFW
+        return EXIT_FAILURE;  // Termina el programa con error
     }
 
-    glfwMakeContextCurrent(window); // Establece el contexto de la ventana
+    glfwMakeContextCurrent(window);  // Hace que el contexto de OpenGL sea el actual
 
-    glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT); // Obtiene el tamaño del framebuffer
+    glfwGetFramebufferSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);  // Obtiene el tamaño de la ventana
 
-    // Establece las funciones de callback para teclas y ratón
+    // Configura las funciones de callback para teclado y mouse
     glfwSetKeyCallback(window, KeyCallback);
     glfwSetCursorPosCallback(window, MouseCallback);
 
-    // GLFW Options
-    //glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_DISABLED ); // Desactiva el cursor (comentado)
-
-    // Inicia GLEW para cargar funciones de OpenGL
-    glewExperimental = GL_TRUE; // Habilita el uso de un enfoque moderno para obtener las funciones de OpenGL
-    if (GLEW_OK != glewInit()) // Verifica que GLEW se haya inicializado correctamente
+    // Inicializa GLEW para cargar las extensiones de OpenGL
+    glewExperimental = GL_TRUE;
+    if (GLEW_OK != glewInit())
     {
-        std::cout << "Failed to initialize GLEW" << std::endl;
-        return EXIT_FAILURE; // Termina el programa si GLEW falla
+        std::cout << "Failed to initialize GLEW" << std::endl;  // Error al inicializar GLEW
+        return EXIT_FAILURE;  // Termina el programa con error
     }
 
-    // Define las dimensiones del viewport
-    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);  // Define las dimensiones del viewport
 
-    // Activa la prueba de profundidad (para renderizar correctamente objetos 3D)
+    // Habilita el test de profundidad para el renderizado 3D
     glEnable(GL_DEPTH_TEST);
 
-    // Carga y compila los shaders
-    Shader shader("Shader/modelLoading.vs", "Shader/modelLoading.frag");
-    Shader lampshader("Shader/lamp.vs", "Shader/lamp.frag");
-    Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");
+    // Compila los shaders
+    Shader shader("Shader/modelLoading.vs", "Shader/modelLoading.frag");  // Shader para cargar modelos
+    Shader lampshader("Shader/lamp.vs", "Shader/lamp.frag");  // Shader para la luz
+    Shader lightingShader("Shader/lighting.vs", "Shader/lighting.frag");  // Shader para la iluminación
 
-    // Carga los modelos 3D
-    Model red_dog((char*)"Models/RedDog.obj");
-    Model sol((char*)"Models/Estatua/estatua__statue.obj");
-    glm::mat4 projection = glm::perspective(camera.GetZoom(), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+    // Carga los modelos
+    Model desierto((char*)"Models/en_el_desierto_de_yemen.obj");  // Carga el modelo del desierto
+    Model dog((char*)"Models/RedDog.obj");  // Carga el modelo del perro
+    Model car((char*)"Models/mercedes-benz_sl_65_amg_black_series_r230.obj");  // Carga el modelo del coche
+    Model estatua((char*)"Models/Estatua/estatua__statue.obj");  // Carga el modelo de la estatua
+    Model cactus((char*)"Models/Cactus/flowering_cactus.obj");  // Carga el modelo del cactus
+    Model rango((char*)"Models/Rango/modern_luxury_wedding_arch_house_building_design.obj");  // Carga el modelo de la casa
+    Model fig1((char*)"Models/Fig1/light_tactical_vehicle_aquus_areg.obj");  // Carga el modelo del vehículo
+    //Model luna((char*)"Models/Luna/la_luna__viaje_virtual_guiado__3d___vr.obj");  // Carga el modelo de la luna
+    Model luna((char*)"Models/Lunaa/tripo_convert_36d7d968-399d-46df-97a0-976f8c3bb536.obj");  // Carga el modelo de la luna
+    Model sol((char*)"Models/Sol/sol.obj");  // Carga el modelo del sol
+    glm::mat4 projection = glm::perspective(camera.GetZoom(), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);  // Proyección perspectiva
 
-    // Define los vértices de un cubo
+    // Definición de los vértices de un cubo
     float vertices[] = {
-        // x     y      z      Vector Normal 
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+          -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
          0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
          0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
          0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -155,249 +160,290 @@ int main()
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
     };
 
-    // First, set the container's VAO (and VBO)
-    GLuint VBO, VAO;
-    glGenVertexArrays(1, &VAO); // Genera un Vertex Array Object
-    glGenBuffers(1, &VBO); // Genera un Vertex Buffer Object
-    glBindVertexArray(VAO); // Víncula el VAO actual
-    glBindBuffer(GL_ARRAY_BUFFER, VBO); // Víncula el VBO actual
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW); // Copia los vértices en el buffer
-    // Position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0); // Define el atributo de posición
-    glEnableVertexAttribArray(0); // Habilita el atributo de posición
-    // normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float))); // Define el atributo de normales
-    glEnableVertexAttribArray(1); // Habilita el atributo de normales
+    // Configuración del VAO y VBO para el cubo
+    GLuint VBO, VAO;  // Variables para el VAO y VBO
+    glGenVertexArrays(1, &VAO);  // Genera el VAO
+    glGenBuffers(1, &VBO);  // Genera el VBO
+    glBindVertexArray(VAO);  // Activa el VAO
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);  // Activa el VBO
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);  // Carga los vértices en el VBO
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (GLvoid*)0);  // Atributo de posición
+    glEnableVertexAttribArray(0);  // Habilita el atributo de posición
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));  // Atributo de normales
+    glEnableVertexAttribArray(1);  // Habilita el atributo de normales
 
-    // Load textures
-    GLuint texture;
-    glGenTextures(1, &texture); // Genera una textura
-    glBindTexture(GL_TEXTURE_2D, texture); // Víncula la textura a GL_TEXTURE_2D
-    int textureWidth, textureHeight, nrChannels;
-    stbi_set_flip_vertically_on_load(true); // Establece que la textura debe ser cargada con el eje Y invertido
-    unsigned char* image;
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // Establece la repetición de la textura en el eje X
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // Establece la repetición de la textura en el eje Y
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); // Establece el filtro de minimización
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST); // Establece el filtro de maximización
+    // Carga las texturas
+    GLuint texture;  // Variable para la textura
+    glGenTextures(1, &texture);  // Genera la textura
+    glBindTexture(GL_TEXTURE_2D, texture);  // Activa la textura
+    int textureWidth, textureHeight, nrChannels;  // Variables para el tamaño y los canales de la textura
+    stbi_set_flip_vertically_on_load(true);  // Configura para voltear la imagen verticalmente
+    unsigned char* image;  // Puntero a los datos de la imagen
 
-    image = stbi_load("Models/Texture_albedo.jpg", &textureWidth, &textureHeight, &nrChannels, 0); // Carga la textura
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image); // Aplica la textura
-    glGenerateMipmap(GL_TEXTURE_2D); // Genera los mipmaps de la textura
-    if (image) // Si la imagen se carga correctamente
+    // Configura las propiedades de la textura
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);  // Ajuste para el eje X
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);  // Ajuste para el eje Y
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);  // Filtro para la textura cuando se ve a distancia
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST_MIPMAP_NEAREST);  // Filtro para la textura cuando se ve de cerca
+
+    // Carga la imagen
+    image = stbi_load("Models/Texture_albedo.jpg", &textureWidth, &textureHeight, &nrChannels, 0);  // Carga la imagen
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);  // Crea la textura
+    glGenerateMipmap(GL_TEXTURE_2D);  // Genera los mipmaps de la textura
+    if (image)  // Si la imagen se carga correctamente
     {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-        glGenerateMipmap(GL_TEXTURE_2D); // Genera los mipmaps de la textura
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textureWidth, textureHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, image);  // Crea la textura
+        glGenerateMipmap(GL_TEXTURE_2D);  // Genera mipmaps
     }
     else
     {
-        std::cout << "Failed to load texture" << std::endl; // Si falla, muestra un mensaje de error
+        std::cout << "Failed to load texture" << std::endl;  // Error al cargar la textura
     }
-    stbi_image_free(image); // Libera la memoria de la imagen cargada
+    stbi_image_free(image);  // Libera la memoria de la imagen
 
-    // Game loop
-    while (!glfwWindowShouldClose(window)) // Mientras la ventana no se cierre
+    // Bucle principal del juego
+    while (!glfwWindowShouldClose(window))
     {
-        // Set frame time
-        GLfloat currentFrame = glfwGetTime(); // Obtiene el tiempo actual
-        deltaTime = currentFrame - lastFrame; // Calcula el tiempo entre fotogramas
-        lastFrame = currentFrame; // Actualiza el tiempo del último fotograma
+        // Calcula el tiempo entre fotogramas
+        GLfloat currentFrame = glfwGetTime();  // Obtiene el tiempo actual
+        deltaTime = currentFrame - lastFrame;  // Calcula el tiempo transcurrido
+        lastFrame = currentFrame;  // Actualiza el último fotograma
 
-        // Check and call events
-        glfwPollEvents(); // Verifica eventos de la ventana (teclado, ratón, etc.)
-        DoMovement(); // Realiza el movimiento de la cámara
+        // Procesa los eventos de la ventana
+        glfwPollEvents();
+        DoMovement();  // Llama a la función para mover la cámara
 
-        // Clear the colorbuffer
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Establece el color de limpieza (fondo)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Limpia el color y el buffer de profundidad
+        // Limpia el buffer de color y profundidad
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);  // Establece el color de fondo
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);  // Limpia los buffers de color y profundidad
 
-        float movelightPos1 = 0.0f; // Movimiento de la primera luz
-        float movelightPos2 = 0.0f; // Movimiento de la segunda luz
+        lightingShader.Use();  // Usa el shader de iluminación
 
-        //------------------------------ Luz 1 
-        lightingShader.Use(); // Usa el shader de iluminación
-        GLint lightPosLoc = glGetUniformLocation(lightingShader.Program, "light.position"); // Obtiene la ubicación de la posición de la luz
-        GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");           // Obtiene la ubicación de la posición de la cámara
-        glUniform3f(lightPosLoc, lightPos.x + movelightPos, lightPos.y + movelightPos, lightPos.z + movelightPos); // Define la posición de la luz
-        glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z); // Define la posición de la cámara
+        // Movimiento del sol y la luna
+        lightPos.x = cos(reloj) * 50.0f;  // Movimiento del sol
+        lightPos.y = sin(reloj) * 50.0f;  // Movimiento del sol
 
-        // Set lights properties
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "light.ambient"), 0.3f, 0.3f, 0.3f); // Define la propiedad de luz ambiental
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "light.diffuse"), 0.8f, 0.7f, 0.8f); // Define la propiedad de luz difusa
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "light.specular"), 0.0f, 0.0f, 0.0f); // Define la propiedad de luz especular
+        secondLightPos.x = -cos(reloj) * 50.0f;  // Movimiento de la luna
+        secondLightPos.y = -sin(reloj) * 50.0f;  // Movimiento de la luna
 
+        // Envia la posición de la luz y la cámara al shader
+        GLint lightPosLoc = glGetUniformLocation(lightingShader.Program, "light.position");
+        GLint viewPosLoc = glGetUniformLocation(lightingShader.Program, "viewPos");
+        glUniform3f(lightPosLoc, lightPos.x + movelightPos, lightPos.y + movelightPos, lightPos.z + movelightPos);
+        glUniform3f(viewPosLoc, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z);
 
-        //------------------------------------ Luz 2 
-        GLint lightPosLoc2 = glGetUniformLocation(lightingShader.Program, "light2.position"); // Obtiene la ubicación de la segunda luz
-        GLint viewPosLoc2 = glGetUniformLocation(lightingShader.Program, "viewPos");           // Obtiene la ubicación de la cámara
-        glUniform3f(lightPosLoc2, lightPos2.x + movelightPos2, lightPos2.y + movelightPos2, lightPos2.z + movelightPos2); // Define la posición de la luz 2
-        glUniform3f(viewPosLoc2, camera.GetPosition().x, camera.GetPosition().y, camera.GetPosition().z); // Define la posición de la cámara
+        // Envia la posición de la segunda luz (luna) al shader
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.position"), secondLightPos.x, secondLightPos.y, secondLightPos.z);
 
-        // Set lights properties
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.ambient"), 0.3f, 0.3f, 0.3f); // Define la luz ambiental para la luz 2
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.diffuse"), 9.8f, 9.7f, 9.8f); // Define la luz difusa para la luz 2
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.specular"), 0.0f, 0.0f, 0.0f); // Define la luz especular para la luz 2
+        // Configura las propiedades de las luces (día/noche)
+        if (reloj < 3.1 && reloj > 0 && activador == 1) {
+            // Fase del día (luz del sol)
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light.ambient"), 10.0f, 5.0f, 2.0f);
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light.diffuse"), 0.2f, 0.7f, 0.4f);
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light.specular"), 0.3f, 0.6f, 0.4f);
 
+            // Configuración de la luz secundaria (luna) al mínimo
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.ambient"), 0.1f, 0.1f, 0.1f);
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.diffuse"), 0.1f, 0.1f, 0.1f);
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.specular"), 0.1f, 0.1f, 0.1f);
+        }
+        else {
+            // Fase de la noche (luz de la luna)
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light.ambient"), 0.1f, 0.1f, 0.1f);
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light.diffuse"), 0.1f, 0.1f, 0.1f);
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light.specular"), 0.1f, 0.1f, 0.1f);
 
-        glm::mat4 view = camera.GetViewMatrix(); // Obtiene la matriz de vista de la cámara
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection)); // Define la matriz de proyección
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view)); // Define la matriz de vista
+            // Mejora de la luz secundaria (lunar)
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.ambient"), 1.5f, 1.5f, 2.0f);
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.diffuse"), 0.1f, 1.05f, 1.1f);
+            glUniform3f(glGetUniformLocation(lightingShader.Program, "light2.specular"), 0.4f, 0.9f, 1.0f);
+        }
 
+        // Envia las matrices de proyección y vista
+        glm::mat4 view = camera.GetViewMatrix();
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
-        // ------------------------ Configuración de materiales se queda general 
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "material.ambient"), 0.5f, 0.5f, 0.5f); // Establece las propiedades de material
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "material.diffuse"), 0.8f, 0.2f, 0.1f); // Establece las propiedades de material
-        glUniform3f(glGetUniformLocation(lightingShader.Program, "material.specular"), 1.0f, 0.0f, 0.0f); // Establece las propiedades de material
-        glUniform1f(glGetUniformLocation(lightingShader.Program, "material.shininess"), 0.8f); // Establece el brillo del material
-
-
+        // Configura las propiedades materiales
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "material.ambient"), 0.7f, 0.7f, 0.7f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "material.diffuse"), 0.7f, 0.7f, 0.7f);
+        glUniform3f(glGetUniformLocation(lightingShader.Program, "material.specular"), 0.6f, 0.6f, 0.6f);
+        glUniform1f(glGetUniformLocation(lightingShader.Program, "material.shininess"), 0.6f);
 
         // Draw the loaded model
-        glm::mat4 model(1); // Matriz de modelo
-        model = glm::scale(model, glm::vec3(1.0f, 1.0f, 1.0f)); // Escala del modelo
-        glUniformMatrix4fv(glGetUniformLocation(lightingShader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model)); // Aplica la matriz de modelo
-        glBindVertexArray(VAO); // Víncula el VAO
-        red_dog.Draw(lightingShader); // Dibuja el modelo (perro rojo)
-        //mercedez.Draw(lightingShader); // Dibuja otro modelo (comentado)
-        sol.Draw(lightingShader); // Dibuja el modelo de la estatua
-        //luna.Draw(lightingShader); // Dibuja otro modelo (comentado)
+        glm::mat4 model(1); // Crea la matriz de modelo como identidad
+        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+        // Envía la matriz de modelo (identidad) al shader
+
+        // Matriz para el desierto: lo colocamos en el suelo (Y = 0)
+        glm::mat4 modelDesierto = glm::mat4(1.0f);                                                   // Inicia matriz en identidad
+        modelDesierto = glm::translate(modelDesierto, glm::vec3(0.5f, 0.0f, 0.5f));                   // Traslada el desierto
+        modelDesierto = glm::scale(modelDesierto, glm::vec3(0.7f, 0.7f, 0.7f));                       // Escala el desierto
+        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelDesierto));
+        // Envía la matriz de modelo al shader
+        desierto.Draw(lightingShader); // Dibuja el modelo del desierto
+
+        // Matriz para el perro: lo trasladamos para que quede arriba del desierto (Y > 0)
+        glm::mat4 modelPerro = glm::mat4(1.0f);                                                      // Inicia matriz en identidad
+        modelPerro = glm::translate(modelPerro, glm::vec3(-3.0f, 7.5f, 0.0f));                        // Traslada el perro
+        modelPerro = glm::scale(modelPerro, glm::vec3(2.0f, 3.0f, 2.0f));                             // Escala el perro
+        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelPerro));
+        // Envía la matriz al shader
+        dog.Draw(lightingShader); // Dibuja el modelo del perro
+
+        glm::mat4 modelCar = glm::mat4(1.0f);                                                         // Inicia matriz en identidad
+        modelCar = glm::translate(modelCar, glm::vec3(-3.0f, 6.5f, 0.0f));                            // Traslada el coche
+        modelCar = glm::scale(modelCar, glm::vec3(0.3f, 0.3f, 0.3f));                                 // Escala el coche
+        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelCar));
+        // Envía la matriz al shader
+        car.Draw(lightingShader); // Dibuja el modelo del coche
+
+        glm::mat4 modelEstatua = glm::mat4(1.0f);                                                     // Inicia matriz en identidad
+        modelEstatua = glm::translate(modelEstatua, glm::vec3(-10.0f, 6.5f, 0.0f));                   // Traslada la estatua
+        modelEstatua = glm::scale(modelEstatua, glm::vec3(0.9f, 0.9f, 0.9f));                         // Escala la estatua
+        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelEstatua));
+        // Envía la matriz al shader
+        estatua.Draw(lightingShader); // Dibuja el modelo de la estatua
+
+        glm::mat4 modelCactus = glm::mat4(1.0f);                                                      // Inicia matriz en identidad
+        modelCactus = glm::translate(modelCactus, glm::vec3(-5.0f, 6.5f, 0.0f));                      // Traslada el cactus
+        modelCactus = glm::scale(modelCactus, glm::vec3(2.9f, 2.9f, 2.9f));                           // Escala el cactus
+        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelCactus));
+        // Envía la matriz al shader
+        cactus.Draw(lightingShader); // Dibuja el modelo del cactus
+
+        glm::mat4 modelRango = glm::mat4(1.0f);                                                       // Inicia matriz en identidad
+        modelRango = glm::translate(modelRango, glm::vec3(0.0f, 8.0f, -20.0f));                      // Traslada la construcción
+        modelRango = glm::scale(modelRango, glm::vec3(2.9f, 2.9f, 2.9f));                             // Escala la construcción
+        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelRango));
+        // Envía la matriz al shader
+        rango.Draw(lightingShader); // Dibuja el modelo de la construcción
+
+        glm::mat4 modelFig1 = glm::mat4(1.0f);                                                        // Inicia matriz en identidad
+        modelFig1 = glm::translate(modelFig1, glm::vec3(-15.0f, 7.5f, 0.0f));                         // Traslada el vehículo
+        modelFig1 = glm::scale(modelFig1, glm::vec3(1.0f, 1.0f, 1.0f));                               // Escala el vehículo
+        glUniformMatrix4fv(glGetUniformLocation(shader.Program, "model"), 1, GL_FALSE, glm::value_ptr(modelFig1));
+        // Envía la matriz al shader
+        fig1.Draw(lightingShader); // Dibuja el modelo del vehículo
+
+        //glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
-        glDrawArrays(GL_TRIANGLES, 0, 36); // Dibuja el cubo
-        glBindVertexArray(0); // Desvincula el VAO
+        glBindVertexArray(0);
 
 
+        lampshader.Use();
+        glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
+        glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view));
 
-        // ------------------ Representación de la primera fuente de luz (Luz 1) -------------------
-        lampshader.Use(); // Usa el shader para la luz
-        glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection)); // Aplica la matriz de proyección
-        glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view)); // Aplica la matriz de vista
-
-        // Primer modelo para la primera fuente de luz
-        model = glm::mat4(1.0f); // Inicializa la matriz de modelo
-        model = glm::translate(model, lightPos + movelightPos); // Traslada el modelo a la posición de la luz
-        model = glm::scale(model, glm::vec3(0.3f));  // Tamaño de la luz (ajusta según sea necesario)
-        glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model)); // Aplica la matriz de modelo
-        glBindVertexArray(VAO); // Víncula el VAO
-        glDrawArrays(GL_TRIANGLES, 0, 36);  // Dibuja la luz
-        glBindVertexArray(0); // Desvincula el VAO
-
-        // ------------------ Representación de la segunda fuente de luz (Luz 2) -------------------
-        lampshader.Use(); // Usa el shader para la luz
-        glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "projection"), 1, GL_FALSE, glm::value_ptr(projection)); // Aplica la matriz de proyección
-        glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "view"), 1, GL_FALSE, glm::value_ptr(view)); // Aplica la matriz de vista
-
-        // Segundo modelo para la segunda fuente de luz
-        model = glm::mat4(1.0f); // Inicializa la matriz de modelo
-        model = glm::translate(model, lightPos2 + movelightPos2);  // Traslada el modelo a la posición de la luz 2
-        model = glm::scale(model, glm::vec3(0.3f));  // Tamaño de la luz (ajusta según sea necesario)
-        glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model)); // Aplica la matriz de modelo
-        glBindVertexArray(VAO); // Víncula el VAO
-        glDrawArrays(GL_TRIANGLES, 0, 36);  // Dibuja la segunda luz
-        glBindVertexArray(0); // Desvincula el VAO
-
+        if (activador == 1) {
+            // Dibujar el sol (Lampara 1)
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, lightPos + movelightPos);
+            model = glm::scale(model, glm::vec3(1.1f));
+            glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            sol.Draw(lampshader);
+        }
+        else {
+            // Dibujar el luna (Lampara 1)
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, lightPos + movelightPos);
+            model = glm::scale(model, glm::vec3(3.1f));
+            glUniformMatrix4fv(glGetUniformLocation(lampshader.Program, "model"), 1, GL_FALSE, glm::value_ptr(model));
+            luna.Draw(lampshader);
+        }
+        glBindVertexArray(0);
 
         // Swap the buffers
-        glfwSwapBuffers(window); // Intercambia los buffers (para renderizado en la ventana)
+        glfwSwapBuffers(window);
     }
 
-    glDeleteVertexArrays(1, &VAO); // Elimina el VAO
-    glDeleteBuffers(1, &VBO); // Elimina el VBO
+    glDeleteVertexArrays(1, &VAO);  // Elimina el VAO
+    glDeleteBuffers(1, &VBO);  // Elimina el VBO
 
-    glfwTerminate(); // Finaliza GLFW
-    return 0; // Termina el programa
+    glfwTerminate();  // Termina GLFW
+    return 0;  // Retorna 0 para indicar éxito
 }
 
-// Función que maneja el movimiento de la cámara según la entrada del usuario
+// Función para mover la cámara según las teclas presionadas
 void DoMovement()
 {
-    // Controles de la cámara
-    if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP]) // Movimiento hacia adelante
+    // Control de la cámara por teclado
+    if (keys[GLFW_KEY_W] || keys[GLFW_KEY_UP])
     {
-        camera.ProcessKeyboard(FORWARD, deltaTime);
+        camera.ProcessKeyboard(FORWARD, deltaTime);  // Movimiento hacia adelante
     }
 
-    if (keys[GLFW_KEY_S] || keys[GLFW_KEY_DOWN]) // Movimiento hacia atrás
+    if (keys[GLFW_KEY_S] || keys[GLFW_KEY_DOWN])
     {
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
+        camera.ProcessKeyboard(BACKWARD, deltaTime);  // Movimiento hacia atrás
     }
 
-    if (keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT]) // Movimiento hacia la izquierda
+    if (keys[GLFW_KEY_A] || keys[GLFW_KEY_LEFT])
     {
-        camera.ProcessKeyboard(LEFT, deltaTime);
+        camera.ProcessKeyboard(LEFT, deltaTime);  // Movimiento hacia la izquierda
     }
 
-    if (keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT]) // Movimiento hacia la derecha
+    if (keys[GLFW_KEY_D] || keys[GLFW_KEY_RIGHT])
     {
-        camera.ProcessKeyboard(RIGHT, deltaTime);
+        camera.ProcessKeyboard(RIGHT, deltaTime);  // Movimiento hacia la derecha
     }
 
-    if (activanim) // Si la animación está activa
+    if (activanim)  // Si la animación está activada
     {
-        if (rot > -90.0f) // Si la rotación no ha alcanzado el límite
-            rot -= 0.1f; // Resta la rotación
+        if (rot > -90.0f)  // Rota hasta -90 grados
+            rot -= 0.1f;
     }
-
 }
 
-// Función de callback para las teclas
+// Función de callback para teclas presionadas o soltadas
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 {
-    if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action) // Si se presiona la tecla ESC
+    if (GLFW_KEY_ESCAPE == key && GLFW_PRESS == action)
     {
-        glfwSetWindowShouldClose(window, GL_TRUE); // Cierra la ventana
+        glfwSetWindowShouldClose(window, GL_TRUE);  // Cierra la ventana si se presiona ESC
     }
 
-    if (key >= 0 && key < 1024) // Si la tecla está en el rango válido
+    if (key >= 0 && key < 1024)  // Si la tecla está dentro del rango válido
     {
-        if (action == GLFW_PRESS) // Si se presiona la tecla
+        if (action == GLFW_PRESS)
         {
-            keys[key] = true; // Marca la tecla como presionada
+            keys[key] = true;  // Marca la tecla como presionada
         }
-        else if (action == GLFW_RELEASE) // Si se suelta la tecla
+        else if (action == GLFW_RELEASE)
         {
-            keys[key] = false; // Marca la tecla como liberada
+            keys[key] = false;  // Marca la tecla como soltada
         }
     }
 
-    // Mover la primera fuente de luz (luz 1)
-    if (keys[GLFW_KEY_O]) // Si se presiona la tecla O
+    if (reloj < 3 && (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS))  // Si se presiona 'O'
     {
-        movelightPos += 0.1f; // Mueve la luz en la dirección positiva
+        activador = 1.0f;  // Activa la fase de día
+        reloj += 0.1f;  // Incrementa el reloj
     }
 
-    if (keys[GLFW_KEY_L]) // Si se presiona la tecla L
+    if (reloj > 0 && (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS))  // Si se presiona 'L'
     {
-        movelightPos -= 0.1f; // Mueve la luz en la dirección negativa
-    }
-
-    // Mover la segunda fuente de luz (luz 2) con las teclas I y K
-    if (keys[GLFW_KEY_I])  // Mover la luz 2 hacia arriba
-    {
-        lightPos2.y += 0.1f;
-    }
-
-    if (keys[GLFW_KEY_K])  // Mover la luz 2 hacia abajo
-    {
-        lightPos2.y -= 0.1f;
+        activador = 0.0f;  // Activa la fase de noche
+        reloj -= 0.1f;  // Decrementa el reloj
     }
 }
 
-// Función de callback para el movimiento del ratón
+// Función de callback para el movimiento del mouse
 void MouseCallback(GLFWwindow* window, double xPos, double yPos)
 {
-    if (firstMouse) // Si es el primer movimiento del ratón
+    if (firstMouse)  // Si es el primer movimiento del mouse
     {
-        lastX = xPos; // Establece la posición X inicial
-        lastY = yPos; // Establece la posición Y inicial
-        firstMouse = false; // Marca que el ratón ha sido movido por primera vez
+        lastX = xPos;  // Guarda la posición inicial del mouse
+        lastY = yPos;  // Guarda la posición inicial del mouse
+        firstMouse = false;  // Marca que no es el primer movimiento
     }
 
-    GLfloat xOffset = xPos - lastX; // Calcula el desplazamiento en X
-    GLfloat yOffset = lastY - yPos;  // Calcula el desplazamiento en Y (invertido)
+    GLfloat xOffset = xPos - lastX;  // Calcula el desplazamiento en el eje X
+    GLfloat yOffset = lastY - yPos;  // Calcula el desplazamiento en el eje Y (invertido)
 
-    lastX = xPos; // Actualiza la posición X
-    lastY = yPos; // Actualiza la posición Y
+    lastX = xPos;  // Actualiza la posición del mouse en X
+    lastY = yPos;  // Actualiza la posición del mouse en Y
 
-    camera.ProcessMouseMovement(xOffset, yOffset); // Procesa el movimiento del ratón para cambiar la orientación de la cámara
+    camera.ProcessMouseMovement(xOffset, yOffset);  // Procesa el movimiento del mouse
 }

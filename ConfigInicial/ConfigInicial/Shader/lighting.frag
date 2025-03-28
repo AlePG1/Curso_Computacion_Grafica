@@ -28,9 +28,12 @@ uniform Light light;          // Luz 1 original
 uniform Light light2;         // <- NUEVA: Segunda fuente de luz
 
 uniform sampler2D texture_diffusse;
+uniform sampler2D texture1;  // Textura 1 (en este caso la luna)
 
 void main()
 {
+
+ FragColor = texture(texture1, TexCoords);  // Muestra la textura
     // ------------------------- Luz 1 (original) -------------------------
     vec3 ambient1 = light.ambient * material.diffuse;
     
