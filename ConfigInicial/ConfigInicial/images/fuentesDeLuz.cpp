@@ -1,6 +1,6 @@
 /*
 * García González Alejandro       422066992
-* 27 de marzo del 2025            Previo 9. Fuentes de luz
+* 05 de abril del 2025            Practica 9. Fuentes de luz
 */
 #include <iostream>
 #include <cmath>
